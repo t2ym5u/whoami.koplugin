@@ -215,7 +215,8 @@ function WhoAmIScreen:init()
     end
 
     local saved = self.plugin:loadState()
-    self.game = saved and Game.deserialize(saved, self:_deck())
+    self.seen = Game.openHistory(self.plugin, self.lang)
+    self.game = saved and Game.deserialize(saved, self:_deck(), nil, self.seen)
     if not self.game then self:_newGame() end
     self.phase = self.game:isOver() and "over" or "handover"
     self.last_action = 0
@@ -287,7 +288,8 @@ function WhoAmIScreen:_saveSelection()
 end
 
 function WhoAmIScreen:_newGame()
-    self.game = Game.new{ players = self.names, rounds = self.rounds, deck = self:_deck() }
+    self.game = Game.new{ players = self.names, rounds = self.rounds, deck = self:_deck(),
+                          seen = self.seen }
     self.summary = nil
 end
 
@@ -457,7 +459,8 @@ function WhoAmIScreen:openLangMenu()
         on_select  = function(lang)
             self.lang = lang
             self.plugin:saveSetting("lang", lang)
-            self.game:setDeck(self:_deck())
+            self.seen = Game.openHistory(self.plugin, lang)
+            self.game:setDeck(self:_deck(), self.seen)
             self:_redraw()
         end,
     }

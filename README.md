@@ -31,6 +31,8 @@ the others give clues, guess as many cards as you can before the time runs out.
   wrapping between words, never cut mid-word.
 - Countdown of 30, 60 or 90 s; only the timer area refreshes each second.
 - 2–12 players, names typed once (one per line) and remembered.
+- No card comes back from one game (or evening) to the next until the rest of
+  the chosen categories has been played: the last 3,000 cards are remembered.
 - 18 categories, multi-select (or **Mix**), each its own file loaded only when
   played. Plenty of proper nouns (Einstein, Napoléon, Cléopâtre, Marie Curie,
   Dark Vador, Harry Potter, Louis XIV, la Joconde…); sports legends are retired

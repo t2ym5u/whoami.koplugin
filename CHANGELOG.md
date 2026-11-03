@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.1.0] - 2026-11-03
+
+### Changed
+- Cards no longer come back from one game, or one evening, to the next: the
+  game remembers the last 3,000 cards played (per language) and deals the
+  ones not seen yet first. A card returns only once every card of the chosen
+  categories has been played (with Mix, cards older than the last 3,000 may
+  come back a little earlier).
+- Needs game-common 1.11.0.
+
 ## [1.0.2] - 2026-11-02
 
 ### Changed
