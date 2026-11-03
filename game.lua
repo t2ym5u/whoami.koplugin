@@ -5,7 +5,9 @@
 -- turn the others give clues; each card is either found (+1) or passed (0).
 -- After every player has had `rounds` turns, the game is over.
 -- Cards come from a deck built from the chosen categories, never repeated in
--- a game until the deck runs out (then it is reshuffled).
+-- a game until the deck runs out (then it is reshuffled). Across games and
+-- sessions, an optional history (game-common seen_history, see
+-- Game.openHistory) puts the cards not seen yet first.
 -- ---------------------------------------------------------------------------
 
 local Game = {}
@@ -34,6 +36,18 @@ function Game.buildDeck(content, selected)
     return deck
 end
 
+-- History across sessions, one per card language, keyed by the card text.
+-- The decks hold 5,690 (en) and 5,824 (fr) cards; 3,000 remembered words
+-- (~50 KB of settings) is a hundred games or so. Every single category (at
+-- most 519 cards) is remembered in full; with Mix, a card older than the last
+-- 3,000 may come back before some never-shown ones.
+Game.HISTORY_MAX = 3000
+
+function Game.openHistory(plugin, lang)
+    local SeenHistory = require("seen_history")
+    return SeenHistory.open(plugin, "cards_" .. lang, { max = Game.HISTORY_MAX })
+end
+
 local function shuffle(t, rng)
     for i = #t, 2, -1 do
         local j = rng(i)
@@ -42,10 +56,12 @@ local function shuffle(t, rng)
 end
 
 -- opts: players = { "Alice", "Bob" }, rounds = 2, deck = buildDeck(...),
---       used = { [word] = true } (restored game), rng = function(n)
+--       used = { [word] = true } (restored game), rng = function(n),
+--       seen = Game.openHistory(...) (optional)
 function Game.new(opts)
     local self = setmetatable({}, Game)
     self.rng     = opts.rng or math.random
+    self.seen    = opts.seen
     self.rounds  = math.max(1, opts.rounds or 1)
     self.players = {}
     for i, p in ipairs(opts.players or {}) do
@@ -67,14 +83,34 @@ function Game.new(opts)
 end
 
 -- Replace the deck (new categories, new language). Cards already played this
--- game go to the back, so they only come back once everything else has.
-function Game:setDeck(deck)
-    local fresh, old = {}, {}
+-- game go to the back, so they only come back once everything else has;
+-- before them, cards seen in earlier games (history) come after the unseen
+-- ones. When the history has seen every card of the deck, it forgets them
+-- and a new random cycle starts. `seen` replaces the history (new language).
+function Game:setDeck(deck, seen)
+    if seen then self.seen = seen end
+    local h = self.seen
+    if h then
+        local all_seen = #deck > 0
+        for _, c in ipairs(deck) do
+            if not h:has(c.word) then all_seen = false; break end
+        end
+        if all_seen then h:forgetPool(deck) end
+    end
+    local fresh, earlier, old = {}, {}, {}
     for _, c in ipairs(deck) do
-        if self.used[c.word] then old[#old + 1] = c else fresh[#fresh + 1] = c end
+        if self.used[c.word] then
+            old[#old + 1] = c
+        elseif h and h:has(c.word) then
+            earlier[#earlier + 1] = c
+        else
+            fresh[#fresh + 1] = c
+        end
     end
     shuffle(fresh, self.rng)
+    shuffle(earlier, self.rng)
     shuffle(old, self.rng)
+    for _, c in ipairs(earlier) do fresh[#fresh + 1] = c end
     for _, c in ipairs(old) do fresh[#fresh + 1] = c end
     self.deck = fresh
     self.pos  = 1
@@ -112,6 +148,7 @@ function Game:_draw()
     local c = self.deck[self.pos]
     self.pos = self.pos + 1
     self.used[c.word] = true
+    if self.seen then self.seen:mark(c) end
     self.turn.card = c
     return c
 end
@@ -209,7 +246,7 @@ function Game:serialize()
     }
 end
 
-function Game.deserialize(t, deck, rng)
+function Game.deserialize(t, deck, rng, seen)
     if type(t) ~= "table" or type(t.players) ~= "table" or #t.players < Game.MIN_PLAYERS then
         return nil
     end
@@ -229,6 +266,7 @@ function Game.deserialize(t, deck, rng)
         used     = used,
         deck     = deck,
         rng      = rng,
+        seen     = seen,
     }
     if g.current > #g.players then g.current = 1 end
     return g
