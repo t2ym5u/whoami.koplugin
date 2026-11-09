@@ -199,8 +199,7 @@ local WhoAmIScreen = ScreenBase:extend{}
 local READY_SECONDS = 3
 
 function WhoAmIScreen:init()
-    local default_lang = _.lang() == "fr" and "fr" or "en"
-    self.lang       = self.plugin:getSetting("lang", default_lang)
+    self.lang       = self.plugin:getLang({ "fr", "en" })
     self.duration   = self.plugin:getSetting("duration", 60)
     self.rounds     = self.plugin:getSetting("rounds", 2)
     -- The holder faces away from the screen, so the hand that means "Found"
@@ -458,7 +457,7 @@ function WhoAmIScreen:openLangMenu()
         parent     = self,
         on_select  = function(lang)
             self.lang = lang
-            self.plugin:saveSetting("lang", lang)
+            self.plugin:setLang(lang)
             self.seen = Game.openHistory(self.plugin, lang)
             self.game:setDeck(self:_deck(), self.seen)
             self:_redraw()
