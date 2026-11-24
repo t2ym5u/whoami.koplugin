@@ -314,13 +314,15 @@ end
 -- ---------------------------------------------------------------------------
 
 function WhoAmIScreen:_startTicks()
+    self:cancelScheduled()
     self._tick_gen = (self._tick_gen or 0) + 1
     local gen = self._tick_gen
-    UIManager:scheduleIn(1, function() self:_onTick(gen) end)
+    self:schedule(1, function() self:_onTick(gen) end)
 end
 
 function WhoAmIScreen:_stopTicks()
     self._tick_gen = (self._tick_gen or 0) + 1
+    self:cancelScheduled()
 end
 
 function WhoAmIScreen:_timerText()
@@ -344,7 +346,7 @@ function WhoAmIScreen:_onTick(gen)
     else
         return
     end
-    UIManager:scheduleIn(1, function() self:_onTick(gen) end)
+    self:schedule(1, function() self:_onTick(gen) end)
 end
 
 function WhoAmIScreen:_setTimerText(text)
